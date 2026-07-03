@@ -32,6 +32,9 @@ services:
       websocket:
         condition: service_started
         required: true
+      create-site:
+        condition: service_completed_successfully
+        required: false
     environment:
       BACKEND: backend:8000
       FRAPPE_SITE_NAME_HEADER: ${FRAPPE_SITE_NAME_HEADER:-$$host}

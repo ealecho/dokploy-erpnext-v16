@@ -14,6 +14,7 @@ A [Dokploy](https://dokploy.com) template for deploying [ERPNext](https://erpnex
 - Removed the unused `redis-socketio` service (socketio shares `redis-queue` since Frappe v15).
 - Added `PROXY_READ_TIMEOUT` / `CLIENT_MAX_BODY_SIZE` knobs on the frontend and `--set-default` on `bench new-site`, matching upstream defaults.
 - Simplified the `sites` volume to a plain named volume.
+- `frontend` waits for `create-site` to complete before starting, so no traffic reaches Frappe mid-install on first boot (a request during install poisons the Redis module cache and every page 500s with "Module Website not found" until the cache is flushed). Keep `CREATE_SITE=1` — the job is idempotent and exits immediately once the site exists.
 
 ## Usage
 
