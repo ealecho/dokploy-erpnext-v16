@@ -24,3 +24,26 @@ First boot takes a few minutes while the site is created and ERPNext is installe
 
 - **Username:** `Administrator`
 - **Password:** the generated `ADMIN_PASSWORD` (see the project's Environment tab in Dokploy)
+
+## Custom apps (e.g. Healthcare)
+
+Do **not** `bench get-app` inside a running container — only `sites/` is a persistent volume, so the app disappears on redeploy, and the other containers (backend, workers, scheduler) never get the code at all. Instead, bake apps into a custom image:
+
+- `custom-image/apps.json` — the app list built into the image (currently ERPNext + [Marley Healthcare](https://github.com/earthians/marley), both `version-16`).
+- `.github/workflows/build-image.yml` — builds the image with frappe_docker's layered `Containerfile` and pushes it to `ghcr.io/<owner>/erpnext-healthcare:version-16`. Runs on demand (`workflow_dispatch`) and whenever `custom-image/` changes.
+
+To use it, set in the Dokploy project environment:
+
+```
+IMAGE_NAME=ghcr.io/<owner>/erpnext-healthcare
+VERSION=version-16
+INSTALL_APP_ARGS=--install-app erpnext --install-app healthcare
+```
+
+then redeploy. `INSTALL_APP_ARGS` only affects newly created sites; for an existing site, run once after the redeploy:
+
+```bash
+docker exec <backend-container> bench --site <site-name> install-app healthcare
+```
+
+Note: the GHCR package must be public (GitHub → Packages → package settings → change visibility), or you must add GHCR registry credentials in Dokploy.
