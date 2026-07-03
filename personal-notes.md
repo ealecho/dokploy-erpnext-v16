@@ -44,7 +44,23 @@ Why the template doesn't auto-install into existing sites on deploy:
 2. **Risk profile:** app installation mutates schema and data. If it fails halfway during an unattended deploy, you have a half-installed app and a down site with nobody watching. Running it once, attended, with the output in front of you is the safer operational pattern.
 3. **Separation of lifecycle steps:** the stack already has one-shot jobs with distinct responsibilities — `configurator` (bench config), `create-site` (new-site bootstrap), `migration` (schema migrations for already-installed apps on deploy). "Install app X into existing site Y" is a fourth, intentional step; frappe_docker upstream leaves it manual for the same reason.
 
-It *could* be automated — `install-app` is idempotent ("App already installed") — e.g. an `install-apps` one-shot that loops over `INSTALL_APP_ARGS` for every existing site. That's a convenience/risk trade-off, not a technical limitation.
+It *could* be automated — `install-app` is idempotent ("App already installed") — and this template now does exactly that with an `install-apps` one-shot job (see below). That's a convenience/risk trade-off, not a technical limitation.
+
+## The `install-apps` job: automating site convergence
+
+The template now has a fourth one-shot job that closes the loop:
+
+- `APPS_TO_INSTALL` (space-separated app names, e.g. `healthcare`) declares which apps every site on the bench should have. Empty (the default) means the job does nothing.
+- On each deploy, after `create-site` completes, the job loops over every site directory that has a `site_config.json` and runs `bench --site <site> install-app <app>` for each declared app. Frappe skips apps that are already installed, so repeated deploys are no-ops.
+- `INSTALL_APPS=0` disables the job entirely for those who prefer manual, attended installs.
+
+This makes app installation **declarative**: `apps.json` declares what code the image carries; `APPS_TO_INSTALL` declares what every site's database should have installed. A deploy converges reality toward both declarations — the same principle as the `configurator` (bench config) and `migration` (schema) jobs.
+
+The trade-offs accepted by turning it on:
+
+1. It applies the same app list to *all* sites on the bench — fine for the single-site setups this template targets, wrong for true multi-tenant benches with per-site app sets.
+2. A first-time install now happens during an unattended deploy. If it fails, the job exits non-zero and the failure is visible in the Dokploy deploy logs rather than in an interactive terminal.
+3. Apps listed but missing from the image fail the job — which is the correct behavior, since it catches an image/app-list mismatch before it breaks the site at runtime.
 
 ## The principles in one line each
 

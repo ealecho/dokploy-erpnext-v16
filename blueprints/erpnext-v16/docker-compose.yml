@@ -243,6 +243,38 @@ services:
     networks:
       - bench-network
 
+  install-apps:
+    <<: *custom_image
+    deploy:
+      mode: replicated
+      replicas: ${INSTALL_APPS:-0}
+      restart_policy:
+        condition: none
+    entrypoint: ["bash", "-c"]
+    command:
+      - >
+        [[ -z "$${APPS_TO_INSTALL}" ]] && echo "APPS_TO_INSTALL is empty; nothing to do" && exit 0;
+        wait-for-it -t 120 $$DB_HOST:$$DB_PORT;
+        for site in `ls -1 sites`; do
+          [[ -f "sites/$$site/site_config.json" ]] || continue;
+          for app in $$APPS_TO_INSTALL; do
+            echo "Ensuring app $$app is installed on site $$site";
+            bench --site $$site install-app $$app || exit 1;
+          done;
+        done;
+    environment:
+      APPS_TO_INSTALL: ${APPS_TO_INSTALL:-}
+      DB_HOST: ${DB_HOST:-db}
+      DB_PORT: "${DB_PORT:-3306}"
+    depends_on:
+      create-site:
+        condition: service_completed_successfully
+        required: false
+    volumes:
+      - sites:/home/frappe/frappe-bench/sites
+    networks:
+      - bench-network
+
   migration:
     <<: *custom_image
     deploy:

@@ -40,7 +40,15 @@ VERSION=version-16
 INSTALL_APP_ARGS=--install-app erpnext --install-app healthcare
 ```
 
-then redeploy. `INSTALL_APP_ARGS` only affects newly created sites; for an existing site, run once after the redeploy:
+then redeploy. `INSTALL_APP_ARGS` only affects newly created sites. For **existing** sites, the `install-apps` one-shot job converges them on every deploy: set
+
+```
+APPS_TO_INSTALL=healthcare
+```
+
+(space-separated list of app names) and it runs `bench --site <site> install-app <app>` for every site on the bench. It is idempotent — already-installed apps are skipped — and controlled by `INSTALL_APPS=1` (set `0` to disable, e.g. if you prefer to install apps manually). Every app listed must exist in the image, or the job fails the deploy.
+
+Alternatively, install manually once:
 
 ```bash
 docker exec <backend-container> bench --site <site-name> install-app healthcare
