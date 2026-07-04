@@ -54,4 +54,16 @@ Alternatively, install manually once:
 docker exec <backend-container> bench --site <site-name> install-app healthcare
 ```
 
+## Demo seed data (Kampala clinic)
+
+`seed/kampala_clinic_demo.py` populates a site with realistic demo data for a Ugandan clinic: 6 practitioners and 18 patients with local names, Kampala-area contact details, UGX consultation fees and lab prices, a malaria/typhoid/HIV/antenatal lab panel, common medications (Coartem, amoxicillin, …), a booked appointment calendar for today and the coming days, and past encounters with vitals, diagnoses, and prescriptions.
+
+It is idempotent (re-runs keep existing records) and requires the setup wizard to be completed first (log in once as Administrator and finish onboarding — pick Uganda / UGX there). Then:
+
+```bash
+docker cp seed/kampala_clinic_demo.py <backend-container>:/tmp/
+docker exec <backend-container> bash -c \
+  "cd /home/frappe/frappe-bench/sites && ../env/bin/python /tmp/kampala_clinic_demo.py <site-name>"
+```
+
 Note: the GHCR package must be public (GitHub → Packages → package settings → change visibility), or you must add GHCR registry credentials in Dokploy.
